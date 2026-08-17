@@ -75,6 +75,9 @@ Run it: `npx tsx examples/simple-agent.ts`
 | Models | `src/model.ts` | `ModelRegistry` — 5 providers + any OpenAI-compatible endpoint |
 | Graph | `src/graph/graph.ts` | LangGraph-style `StateGraph` (nodes, edges, conditional routing, loops) |
 | Memory | `src/memory.ts` | Conversation memory: in-memory or JSONL-file persistence across restarts |
+| Skills | `src/skill.ts` | DSH-style skills: catalog + `use_skill` tool, loaded on demand |
+| Subagents | `src/subagent.ts` | Child agents via a `subagent` tool (parent delegates, child answers) |
+| Tools pipeline | `src/tools-pipeline.ts` | Around-middleware for tool calls: timeout, allowlist, logging, custom guards |
 | Teams | `src/orchestrate.ts` | Multi-agent: supervisor/worker `AgentTeam`, `parallelAgents`, `parallelNodes` |
 | SPARC | `src/graph/sparc.ts` | 5-phase SPARC methodology as a graph, multi-agent fan-out |
 | DSH bridge | `src/dsh/` | Mount framework tools inside DSH profiles; provider config |
@@ -127,6 +130,12 @@ proxy, a gateway) is configuration, not code. -> [docs/providers.md](docs/provid
 
 - **Persist conversations**: pass `JsonlFileMemory` to `createAgent` (durable
   across restarts).
+- **Add skills**: pass `skills: [defineSkill({...})]` — the agent lists a catalog
+  and loads instructions on demand via `use_skill`.
+- **Add subagents**: pass `subagents: [{ name, description, agent }]` — the
+  parent delegates to children via the `subagent` tool.
+- **Guard tool calls**: `agent.tools.use(timeoutMiddleware(10_000))`,
+  `allowlistMiddleware([...])`, `logMiddleware()`, or your own middleware.
 - **Compose agents**: `AgentTeam` (supervisor delegates to workers) or
   `parallelAgents` / `parallelNodes` for fan-out.
 - **Add a tool**: `defineTool` in your agent's `tools` array, or in
@@ -195,6 +204,18 @@ Details:
 - The DSH profiles are the only part coupled to the harness — by design: they
   hand your agent to the real harness (one-shot CLI or web GUI) with sessions,
   subagents, goals, and sandboxing for free.
+
+**Follow-up question:** *Can I just install the DSH packages (agent loop, tools
+pipeline, skills, subagents) instead?* Not cleanly. The `@deepseek-ai/dsh-*`
+packages exist on npm but are published at stale, mutually inconsistent
+versions (e.g. `dsh-tools`/`dsh-skill`/`dsh-subagent`/`dsh-session` at
+`0.0.1-rc.1` while `dsh-agent-loop` is `0.1.0-rc.6`), and DSH's real agent
+loop is built on `dsh-session` — the loop records every turn into the session
+log, so "no sessions" is impossible with DSH's own loop. This framework
+instead implements all four natively (`src/agent.ts`, `src/tools.ts` +
+`src/tools-pipeline.ts`, `src/skill.ts`, `src/subagent.ts`) with zero
+`@deepseek-ai/*` runtime dependencies — the only part that needs the harness
+is the optional profile path.
 
 ---
 

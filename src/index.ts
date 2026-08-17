@@ -53,6 +53,12 @@ export { InMemoryMemory, JsonlFileMemory } from './memory.ts'
 export type { ConversationMemory } from './memory.ts'
 export { AgentTeam, createAgentTeam, parallelAgents, parallelNodes } from './orchestrate.ts'
 export type { AgentTeamConfig, TeamWorker } from './orchestrate.ts'
+export { SkillRegistry, defineSkill } from './skill.ts'
+export type { Skill } from './skill.ts'
+export { subagentTool } from './subagent.ts'
+export type { SubagentSpec } from './subagent.ts'
+export { allowlistMiddleware, composePipeline, logMiddleware, timeoutMiddleware } from './tools-pipeline.ts'
+export type { ToolCallEnvelope, ToolMiddleware, ToolNext } from './tools-pipeline.ts'
 export type { SparcConfig, SparcState, SparcWorker } from './graph/sparc.ts'
 export {
   PROVIDER_ROUTES,

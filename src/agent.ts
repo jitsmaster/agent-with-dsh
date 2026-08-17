@@ -27,6 +27,8 @@ import {
 } from '@earendil-works/pi-ai'
 import { InMemoryMemory, type ConversationMemory } from './memory.ts'
 import { ModelRegistry, type ModelRoute } from './model.ts'
+import { SkillRegistry, type Skill } from './skill.ts'
+import { subagentTool, type SubagentSpec } from './subagent.ts'
 import { ToolRegistry, type ToolSpec } from './tools.ts'
 
 export interface AgentConfig {
@@ -44,6 +46,10 @@ export interface AgentConfig {
   maxTokens?: number
   /** Conversation memory; defaults to in-memory per Agent. */
   memory?: ConversationMemory
+  /** Skills the agent can load on demand (adds a use_skill tool + catalog). */
+  skills?: Skill[]
+  /** Subagents the agent can delegate to (adds a subagent tool). */
+  subagents?: SubagentSpec[]
 }
 
 export interface RunOptions {
@@ -85,6 +91,8 @@ export class Agent {
   readonly maxSteps: number
   readonly maxTokens?: number
   readonly memory: ConversationMemory
+  readonly skills: SkillRegistry
+  readonly subagents: readonly SubagentSpec[]
 
   constructor(config: AgentConfig) {
     this.model = config.model
@@ -94,6 +102,14 @@ export class Agent {
     this.maxSteps = config.maxSteps ?? 10
     this.maxTokens = config.maxTokens
     this.memory = config.memory ?? new InMemoryMemory()
+    this.skills = new SkillRegistry(config.skills ?? [])
+    if (this.skills.list().length > 0) {
+      this.tools.register(this.skills.toUseSkillTool())
+    }
+    this.subagents = config.subagents ?? []
+    if (this.subagents.length > 0) {
+      this.tools.register(subagentTool(this.subagents))
+    }
   }
 
   /** The conversation so far (from memory). */
@@ -211,8 +227,15 @@ export class Agent {
   }
 
   private buildContext(messages: Message[]): Context {
+    const catalog = this.skills.list()
+    const systemPrompt =
+      catalog.length === 0
+        ? this.systemPrompt
+        : (this.systemPrompt ?? '') +
+          '\n\nAvailable skills (call use_skill to load one):\n' +
+          this.skills.toCatalogText()
     return {
-      systemPrompt: this.systemPrompt,
+      systemPrompt,
       messages,
       tools: this.tools.toPiTools(),
     }

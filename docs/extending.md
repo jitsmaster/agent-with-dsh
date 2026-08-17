@@ -146,7 +146,56 @@ For fire-and-forget fan-out: `parallelAgents([a, b, c], task)` runs them
 concurrently; `parallelNodes([n1, n2])` merges concurrent graph-node updates
 inside a `StateGraph` workflow.
 
-## 8. Publish / share
+## 8. Subagents (lower-level)
+
+`subagents` on an `Agent` is the primitive behind `AgentTeam`: the parent
+gets a `subagent` tool and delegates to child agents (own model/tools/prompt):
+
+```ts
+const parent = createAgent({
+  model: { provider: 'deepseek', model: 'deepseek-v4-flash' },
+  subagents: [
+    { name: 'researcher', description: 'researches topics', agent: researcher },
+  ],
+})
+```
+
+## 9. Skills (on-demand instructions)
+
+Pass `skills` to an `Agent`: the catalog is listed in the system prompt and a
+`use_skill` tool loads the instructions when the model asks — the same idea as
+DSH's skill system, with no harness:
+
+```ts
+const agent = createAgent({
+  model: { provider: 'deepseek', model: 'deepseek-v4-flash' },
+  skills: [
+    defineSkill({
+      name: 'code-review',
+      description: 'review a diff for correctness and style',
+      instructions: '# Code review\nRun the tests, then check...',
+    }),
+  ],
+})
+```
+
+## 10. Tools pipeline (middleware)
+
+Guard every tool call with around-middleware — timeout, allowlist, logging, or
+your own policy. Middleware runs in registration order and can wrap or
+short-circuit:
+
+```ts
+agent.tools.use(timeoutMiddleware(30_000))        // kill slow calls
+agent.tools.use(allowlistMiddleware(['read', 'write', 'search']))
+agent.tools.use(logMiddleware('my-agent'))
+agent.tools.use(async (call, next) => {
+  const result = await next(call.args, call.ctx)
+  return { ...result, content: result.content.slice(0, 2000) } // cap model-visible size
+})
+```
+
+## 11. Publish / share
 
 The framework is a plain npm package (`pnpm pack`, or set `private: false`
 and `pnpm publish`). Profiles and plugins travel with the repo; consumers run

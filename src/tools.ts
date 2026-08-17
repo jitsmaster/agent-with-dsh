@@ -19,6 +19,8 @@ export interface ToolContext {
   [key: string]: unknown
 }
 
+import { composePipeline, type ToolMiddleware, type ToolNext } from './tools-pipeline.ts'
+
 /** A callable tool specification. */
 export interface ToolSpec<P extends TSchema = TSchema, R = unknown> {
   /** Unique tool name (lower_snake_case is conventional). */
@@ -52,9 +54,16 @@ export interface ToolResult {
  */
 export class ToolRegistry {
   private specs = new Map<string, ToolSpec>()
+  private middlewares: ToolMiddleware[] = []
 
   constructor(specs: ToolSpec[] = []) {
     for (const spec of specs) this.register(spec)
+  }
+
+  /** Add a pipeline middleware (around-guard) for every tool call. */
+  use(middleware: ToolMiddleware): this {
+    this.middlewares.push(middleware)
+    return this
   }
 
   /** Register one tool. Throws on duplicate names. */
@@ -93,12 +102,24 @@ export class ToolRegistry {
     }))
   }
 
-  /** Execute a tool by name with raw (unvalidated) arguments. */
+  /** Execute a tool by name with raw (unvalidated) arguments, through the pipeline. */
   async execute(name: string, args: Record<string, unknown>, ctx: ToolContext = {}): Promise<ToolResult> {
     const spec = this.specs.get(name)
     if (!spec) {
       return { ok: false, content: `unknown tool: ${name}`, error: `unknown tool: ${name}` }
     }
+    const core: ToolNext = async (a, c) => this.runCore(spec, a, c)
+    const runner =
+      this.middlewares.length > 0 ? composePipeline(name, this.middlewares, core) : core
+    return runner(args, ctx)
+  }
+
+  /** The unguarded tool body (used as the pipeline's core). */
+  private async runCore(
+    spec: ToolSpec,
+    args: Record<string, unknown>,
+    ctx: ToolContext,
+  ): Promise<ToolResult> {
     try {
       const parsed = this.parseArgs(spec, args)
       const out = await spec.run(parsed, ctx)
@@ -106,7 +127,7 @@ export class ToolRegistry {
       return { ok: true, content, details: typeof out === 'string' ? undefined : out }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      return { ok: false, content: `tool ${name} failed: ${message}`, error: message }
+      return { ok: false, content: `tool ${spec.name} failed: ${message}`, error: message }
     }
   }
 
