@@ -1,0 +1,55 @@
+# === Node / JS toolchain ===
+node_modules/
+.pnpm-store/
+.pnpm-workspace-state.json
+*.tsbuildinfo
+dist/
+lib/
+build/
+out/
+coverage/
+.nyc_output/
+.turbo/
+
+# === DSH runtime artifacts ===
+.sessions/
+.dsh/
+*.session.jsonl
+*.session.jsonl.zstd
+sessions/
+cache/
+
+# === Environment & secrets ===
+.env
+.env.*
+!.env.example
+.credentials.yaml
+*.pem
+*.key
+*.p12
+*.mobileprovision
+
+# === Logs ===
+*.log
+logs/
+
+# === Python tooling (venvs, caches) ===
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# === OS / editor cruft ===
+.DS_Store
+Thumbs.db
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# === Temp files ===
+*.tmp
+*.temp
+.cache/
