@@ -1,0 +1,14 @@
+{
+  "name": "dsh-profile-my-agent-web",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {},
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app"
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "dsh-profile-my-agent-headless",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {},
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-headless"
+      ]
+    }
+  }
+}
