@@ -165,6 +165,36 @@ agent-with-dsh/
 +-- bin/setup.sh       installs profiles into ~/.dsh
 +-- .env.example       provider key template
 ```
+---
+
+## Runtime requirements — do I need DSH installed?
+
+**Question:** Does agent-with-dsh need the DeepSeek Harness (DSH) installed on
+the same machine to run — or does the cordis package itself already include
+DSH's core functionality?
+
+**Answer:** It depends on which path you use. The framework core is fully
+portable; only the ready-made DSH profiles require the harness.
+
+| Path | DSH required? | Runtime dependencies |
+|---|---|---|
+| **Standalone TS API** (`createAgent`, `ModelRegistry`, `StateGraph`, `runSparc`, memory, teams) | **No** — runs in any Node process | `@earendil-works/pi-ai` + `js-yaml` only |
+| **DSH profiles** (`my-agent-headless`, `my-agent-web`) | **Yes** — profiles boot inside a real `dsh` process | the DSH checkout + `pnpm dsh` |
+
+Details:
+
+- The framework core has **no `@deepseek-ai/*` runtime imports**. `@deepseek-ai/cordis`
+  appears only as a peer/dev dependency for type-checking the DSH plugin
+  example. Install the core anywhere: `npm install` + one provider key.
+- **Cordis is not DSH core.** Cordis is only the plugin substrate underneath
+  DSH (plugin lifecycle, service/context registry, typed events). DSH's actual
+  functionality — the agent loop, sessions, tools pipeline, skills, subagents,
+  web UI — lives in the `@deepseek-ai/dsh-*` packages, composed into bundles
+  (`dsh-base`, `dsh-headless`, `dsh-web-app`) and activated only inside a
+  real `dsh` process. Installing cordis alone would not give you DSH.
+- The DSH profiles are the only part coupled to the harness — by design: they
+  hand your agent to the real harness (one-shot CLI or web GUI) with sessions,
+  subagents, goals, and sandboxing for free.
 
 ---
 
