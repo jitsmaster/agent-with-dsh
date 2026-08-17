@@ -49,6 +49,10 @@ export type {
   InvokeOptions,
 } from './graph/graph.ts'
 export { runSparc, sparcGraph } from './graph/sparc.ts'
+export { InMemoryMemory, JsonlFileMemory } from './memory.ts'
+export type { ConversationMemory } from './memory.ts'
+export { AgentTeam, createAgentTeam, parallelAgents, parallelNodes } from './orchestrate.ts'
+export type { AgentTeamConfig, TeamWorker } from './orchestrate.ts'
 export type { SparcConfig, SparcState, SparcWorker } from './graph/sparc.ts'
 export {
   PROVIDER_ROUTES,

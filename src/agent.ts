@@ -25,6 +25,7 @@ import {
   type ToolResultMessage,
   type UserMessage,
 } from '@earendil-works/pi-ai'
+import { InMemoryMemory, type ConversationMemory } from './memory.ts'
 import { ModelRegistry, type ModelRoute } from './model.ts'
 import { ToolRegistry, type ToolSpec } from './tools.ts'
 
@@ -41,6 +42,8 @@ export interface AgentConfig {
   maxSteps?: number
   /** Per-request output token cap. */
   maxTokens?: number
+  /** Conversation memory; defaults to in-memory per Agent. */
+  memory?: ConversationMemory
 }
 
 export interface RunOptions {
@@ -81,6 +84,7 @@ export class Agent {
   readonly registry: ModelRegistry
   readonly maxSteps: number
   readonly maxTokens?: number
+  readonly memory: ConversationMemory
 
   constructor(config: AgentConfig) {
     this.model = config.model
@@ -89,6 +93,12 @@ export class Agent {
     this.registry = config.registry ?? sharedRegistry
     this.maxSteps = config.maxSteps ?? 10
     this.maxTokens = config.maxTokens
+    this.memory = config.memory ?? new InMemoryMemory()
+  }
+
+  /** The conversation so far (from memory). */
+  get messages(): Message[] {
+    return this.memory.load()
   }
 
   /** Add a tool after construction (fluent). */
@@ -105,7 +115,9 @@ export class Agent {
 
   /** Run the loop to completion. Returns the full conversation. */
   async run(input: string | Message[], options: RunOptions = {}): Promise<AgentRunResult> {
-    const messages = toMessages(input)
+    const initial = toMessages(input)
+    const messages = [...this.memory.load(), ...initial]
+    for (const msg of initial) this.memory.append(msg)
     const maxSteps = options.maxSteps ?? this.maxSteps
     let steps = 0
     let toolCalls = 0
@@ -119,6 +131,7 @@ export class Agent {
         maxTokens: this.maxTokens,
       })
       messages.push(response)
+      this.memory.append(response)
 
       const calls = toolCallsOf(response)
       if (calls.length === 0) {
@@ -127,7 +140,9 @@ export class Agent {
       toolCalls += calls.length
 
       for (const call of calls) {
-        messages.push(await this.executeTool(call, options.signal))
+        const result = await this.executeTool(call, options.signal)
+        messages.push(result)
+        this.memory.append(result)
       }
     }
 
@@ -140,7 +155,9 @@ export class Agent {
 
   /** Run the loop, yielding model/tool events as they happen. */
   async *runStream(input: string | Message[], options: RunOptions = {}): AsyncGenerator<AgentStreamEvent> {
-    const messages = toMessages(input)
+    const initial = toMessages(input)
+    const messages = [...this.memory.load(), ...initial]
+    for (const msg of initial) this.memory.append(msg)
     const maxSteps = options.maxSteps ?? this.maxSteps
     let steps = 0
     let toolCalls = 0
@@ -165,6 +182,7 @@ export class Agent {
         }
         if (!response) throw new Error('model stream ended without a message')
         messages.push(response)
+        this.memory.append(response)
         yield { type: 'model', message: response }
 
         const calls = toolCallsOf(response)
@@ -177,6 +195,7 @@ export class Agent {
         for (const call of calls) {
           const result = await this.executeTool(call, options.signal)
           messages.push(result)
+          this.memory.append(result)
           yield { type: 'tool_result', result }
         }
       }

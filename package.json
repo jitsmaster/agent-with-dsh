@@ -1,6 +1,6 @@
 {
   "name": "agent-with-dsh",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "A LangChain-style TypeScript framework for building your own agent on the DeepSeek Harness (DSH): configurable multi-provider models (DeepSeek, OpenAI, Anthropic, OpenRouter, Ollama), tools, sessions, streaming, and graph/SPARC workflows.",

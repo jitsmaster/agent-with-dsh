@@ -101,7 +101,52 @@ See [graph-mode.md](graph-mode.md) for `StateGraph` and the SPARC preset.
 - Validate: `pnpm dsh --profile <name> --dump-config` (no boot, read-only).
 - Boot: `pnpm dsh --profile <name> ...`.
 
-## 6. Publish / share
+## 6. Persist conversations (memory)
+
+`createAgent` accepts a `memory`. The default is in-memory per instance;
+`JsonlFileMemory` persists every message to a JSONL file so conversations
+survive restarts (and can be inspected/replayed):
+
+```ts
+import { createAgent, JsonlFileMemory } from './src/index.ts'
+
+const agent = createAgent({
+  model: { provider: 'deepseek', model: 'deepseek-v4-flash' },
+  memory: new JsonlFileMemory('./sessions/chat.jsonl'),
+})
+
+await agent.run('remember my name is Ada')   // run 1
+await agent.run('what is my name?')          // run 2 — still knows
+```
+
+Each run appends the user message, assistant messages, and tool results to
+memory, so multi-turn context is preserved automatically. Implement
+`ConversationMemory` to plug in your own store (SQLite, Redis, ...).
+
+## 7. Multi-agent teams
+
+`AgentTeam` gives you a supervisor agent with a `delegate` tool; workers are
+specialist agents the supervisor calls when it decides to:
+
+```ts
+import { AgentTeam, createAgent } from './src/index.ts'
+
+const team = new AgentTeam({
+  model: { provider: 'deepseek', model: 'deepseek-v4-flash' },
+  systemPrompt: 'You are a project lead. Delegate focused subtasks to workers, then synthesize.',
+  workers: [
+    { name: 'writer', description: 'writes drafts', agent: createAgent({ model, systemPrompt: 'You are a writer.' }) },
+    { name: 'critic', description: 'critiques drafts', agent: createAgent({ model, systemPrompt: 'You are a strict critic.' }) },
+  ],
+})
+const { final } = await team.run('Draft a README for a CLI tool, then critique it.')
+```
+
+For fire-and-forget fan-out: `parallelAgents([a, b, c], task)` runs them
+concurrently; `parallelNodes([n1, n2])` merges concurrent graph-node updates
+inside a `StateGraph` workflow.
+
+## 8. Publish / share
 
 The framework is a plain npm package (`pnpm pack`, or set `private: false`
 and `pnpm publish`). Profiles and plugins travel with the repo; consumers run

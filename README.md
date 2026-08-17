@@ -74,6 +74,8 @@ Run it: `npx tsx examples/simple-agent.ts`
 | Tools | `src/tools.ts` | `defineTool` (TypeBox schemas), `ToolRegistry` |
 | Models | `src/model.ts` | `ModelRegistry` — 5 providers + any OpenAI-compatible endpoint |
 | Graph | `src/graph/graph.ts` | LangGraph-style `StateGraph` (nodes, edges, conditional routing, loops) |
+| Memory | `src/memory.ts` | Conversation memory: in-memory or JSONL-file persistence across restarts |
+| Teams | `src/orchestrate.ts` | Multi-agent: supervisor/worker `AgentTeam`, `parallelAgents`, `parallelNodes` |
 | SPARC | `src/graph/sparc.ts` | 5-phase SPARC methodology as a graph, multi-agent fan-out |
 | DSH bridge | `src/dsh/` | Mount framework tools inside DSH profiles; provider config |
 | Profiles | `profiles/` | Ready-made `my-agent-headless` + `my-agent-web` |
@@ -97,6 +99,10 @@ Run it: `npx tsx examples/simple-agent.ts`
    Architecture -> Refinement -> Completion with a quality-review loop.
    -> [docs/graph-mode.md](docs/graph-mode.md)
 
+4. **Memory & multi-agent teams** — persist conversations with `JsonlFileMemory`,
+   and compose agents with the supervisor/worker `AgentTeam` or `parallelAgents`.
+   -> [docs/extending.md](docs/extending.md)
+
 ---
 
 ## Providers (configurable, no code changes)
@@ -119,6 +125,10 @@ proxy, a gateway) is configuration, not code. -> [docs/providers.md](docs/provid
 
 ## Extending
 
+- **Persist conversations**: pass `JsonlFileMemory` to `createAgent` (durable
+  across restarts).
+- **Compose agents**: `AgentTeam` (supervisor delegates to workers) or
+  `parallelAgents` / `parallelNodes` for fan-out.
 - **Add a tool**: `defineTool` in your agent's `tools` array, or in
   `examples/dsh-tools-plugin.ts` to expose it to the DSH profiles.
 - **Add a hook / context injection**: listen on DSH events (`agent/pre-step`,
